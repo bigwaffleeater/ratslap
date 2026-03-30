@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Ratslap Test</title>
+    <style>
+        body { font-family: monospace; padding: 20px; }
+        button { margin: 5px; padding: 8px 16px; cursor: pointer; }
+        #log { margin-top: 20px; border: 1px solid #ccc; padding: 10px; height: 300px; overflow-y: auto; }
+        .event { margin: 4px 0; }
+        .sent { color: blue; }
+        .received { color: green; }
+        .error { color: red; }
+    </style>
+</head>
+<body>
+    <h2>Ratslap Backend Test</h2>
+
+    <div>
+        <input id="nameInput" placeholder="Enter your name" />
+        <button onclick="createRoom()">Create Room</button>
+    </div>
+
+    <div>
+        <input id="roomCodeInput" placeholder="Room code" />
+        <input id="joinNameInput" placeholder="Your name" />
+        <button onclick="joinRoom()">Join Room</button>
+    </div>
+
+    <div>
+        <button onclick="startGame()">Start Game</button>
+        <button onclick="playCard()">Play Card</button>
+        <button onclick="slap()">SLAP</button>
+    </div>
+
+    <div>
+        <strong>Room:</strong> <span id="roomCode">none</span> |
+        <strong>Players:</strong> <span id="playerCount">0</span> |
+        <strong>Pile:</strong> <span id="pileInfo">empty</span> |
+        <strong>Turn:</strong> <span id="currentTurn">-</span>
+    </div>
+
+    <div id="log"></div>
+
+    <script src="https://cdn.socket.io/4.8.0/socket.io.min.js"></script>
+    <script>
+        const socket = io("http://localhost:3000");
+        let currentRoomCode = null;
+
+        function log(msg, type = "event") {
+            const div = document.getElementById("log");
+            const entry = document.createElement("div");
+            entry.className = `event ${type}`;
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+            div.appendChild(entry);
+            div.scrollTop = div.scrollHeight;
+        }
+
+        socket.on("connect", () => log(`Connected: ${socket.id}`, "received"));
+        socket.on("disconnect", () => log("Disconnected", "error"));
+
+        socket.on("room-created", (room) => {
+            currentRoomCode = room.id;
+            document.getElementById("roomCode").textContent = room.id;
+            document.getElementById("playerCount").textContent = room.players.length;
+            log(`Room created: ${room.id}`, "received");
+        });
+
+        socket.on("room-updated", (room) => {
+            document.getElementById("playerCount").textContent = room.players.length;
+            log(`Room updated: ${room.players.length} players`, "received");
+        });
+
+        socket.on("game-started", (data) => {
+            document.getElementById("currentTurn").textContent = data.currentPlayerId;
+            document.getElementById("pileInfo").textContent = `${data.pile.size} cards`;
+            log(`Game started! ${data.players.map(p => `${p.name}(${p.cardCount})`).join(", ")}`, "received");
+        });
+
+        let prevCounts = {};
+
+        socket.on("card-played", (data) => {
+            const card = data.topCard;
+            document.getElementById("pileInfo").textContent = `${card.value} of ${card.suit} (${data.pile.size} cards)`;
+            document.getElementById("currentTurn").textContent = data.currentPlayerId;
+
+            let msg = `${data.playerId.slice(0,6)} plays ${card.value} of ${card.suit}`;
+            msg += ` | ${data.players.map(p => `${p.name}:${p.cardCount}`).join(", ")}`;
+
+            // Detect pile being awarded
+            data.players.forEach(p => {
+                if (prevCounts[p.id] !== undefined && p.cardCount > prevCounts[p.id] + 1) {
+                    msg += ` | 🃏 ${p.name} takes the pile!`;
+                }
+            });
+
+            // Update previous counts
+            data.players.forEach(p => prevCounts[p.id] = p.cardCount);
+
+            log(msg, "received");
+        });
+
+        socket.on("slap-result", (data) => {
+            if (data.valid) {
+                log(`VALID SLAP by ${data.playerId}! They win the pile`, "received");
+            } else {
+                log(`INVALID SLAP by ${data.playerId} — burned a card`, "error");
+            }
+            document.getElementById("pileInfo").textContent = `${data.pile.size} cards`;
+        });
+
+        socket.on("error", (msg) => log(`Error: ${msg}`, "error"));
+
+        socket.on("game-over", (data) => {
+            log(`🏆 GAME OVER — ${data.winnerName} wins! | ${data.players.map(p => `${p.name}:${p.cardCount}`).join(", ")}`, "important");
+
+            const challengeInfo = document.getElementById("challengeInfo");
+            if (challengeInfo) challengeInfo.textContent = "none";
+
+            document.getElementById("currentTurn").textContent = "-";
+        });
+
+        function createRoom() {
+            const name = document.getElementById("nameInput").value || "Player1";
+            socket.emit("create-room", name);
+            log(`Creating room as ${name}`, "sent");
+        }
+
+        function joinRoom() {
+            const code = document.getElementById("roomCodeInput").value;
+            const name = document.getElementById("joinNameInput").value || "Player2";
+            currentRoomCode = code;
+            socket.emit("join-room", { roomCode: code, playerName: name });
+            log(`Joining room ${code} as ${name}`, "sent");
+        }
+
+        function startGame() {
+        console.log("Starting game with room code:", currentRoomCode);
+        socket.emit("start-game", currentRoomCode);
+        log("Starting game", "sent");
+    }
+
+        function playCard() {
+            socket.emit("play-card", currentRoomCode);
+            log("Playing card", "sent");
+        }
+
+        function slap() {
+            socket.emit("slap", currentRoomCode);
+            log("SLAP!", "sent");
+        }
+    </script>
+</body>
+</html>
