@@ -10,6 +10,7 @@
         .sent { color: blue; }
         .received { color: green; }
         .error { color: red; }
+        .important { color: purple; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -46,6 +47,8 @@
         const socket = io("http://localhost:3000");
         let currentRoomCode = null;
 
+        const playerNames = {};
+
         function log(msg, type = "event") {
             const div = document.getElementById("log");
             const entry = document.createElement("div");
@@ -62,49 +65,64 @@
             currentRoomCode = room.id;
             document.getElementById("roomCode").textContent = room.id;
             document.getElementById("playerCount").textContent = room.players.length;
+
+            room.players.forEach(p => playerNames[p.id] = p.name);
+
             log(`Room created: ${room.id}`, "received");
         });
 
         socket.on("room-updated", (room) => {
             document.getElementById("playerCount").textContent = room.players.length;
+
+            room.players.forEach(p => playerNames[p.id] = p.name);
+
             log(`Room updated: ${room.players.length} players`, "received");
         });
 
         socket.on("game-started", (data) => {
             document.getElementById("currentTurn").textContent = data.currentPlayerId;
             document.getElementById("pileInfo").textContent = `${data.pile.size} cards`;
+
+            data.players.forEach(p => playerNames[p.id] = p.name);
+
             log(`Game started! ${data.players.map(p => `${p.name}(${p.cardCount})`).join(", ")}`, "received");
         });
+socket.on("card-played", (data) => {
+    const card = data.playedCard || data.topCard || data.pile?.topCard || null;
+    const playerName = playerNames[data.playerId] || data.playerId.slice(0, 6);
 
-        let prevCounts = {};
+    if (!card) {
+        console.error("card-played missing card payload:", data);
+        log(`Received card-played event, but no card was provided`, "error");
+        return;
+    }
 
-        socket.on("card-played", (data) => {
-            const card = data.topCard;
-            document.getElementById("pileInfo").textContent = `${card.value} of ${card.suit} (${data.pile.size} cards)`;
-            document.getElementById("currentTurn").textContent = data.currentPlayerId;
+    document.getElementById("pileInfo").textContent =
+        data.pile && data.pile.size > 0
+            ? `${card.value} of ${card.suit} (${data.pile.size} cards)`
+            : "empty";
 
-            let msg = `${data.playerId.slice(0,6)} plays ${card.value} of ${card.suit}`;
-            msg += ` | ${data.players.map(p => `${p.name}:${p.cardCount}`).join(", ")}`;
+    document.getElementById("currentTurn").textContent = data.currentPlayerId ?? "-";
 
-            // Detect pile being awarded
-            data.players.forEach(p => {
-                if (prevCounts[p.id] !== undefined && p.cardCount > prevCounts[p.id] + 1) {
-                    msg += ` | 🃏 ${p.name} takes the pile!`;
-                }
-            });
+    let msg = `${playerName} plays ${card.value} of ${card.suit}`;
+    msg += ` | ${data.players.map(p => `${p.name}:${p.cardCount}`).join(", ")}`;
+    log(msg, "received");
 
-            // Update previous counts
-            data.players.forEach(p => prevCounts[p.id] = p.cardCount);
-
-            log(msg, "received");
-        });
+    if (data.pileWinnerName) {
+        log(`🃏 ${data.pileWinnerName} takes the pile!`, "received");
+    }
+});
 
         socket.on("slap-result", (data) => {
+            const slapperName = playerNames[data.playerId] || data.playerId.slice(0,6);
+            const winnerName = playerNames[data.winnerId] || data.winnerId?.slice(0,6);
+
             if (data.valid) {
-                log(`VALID SLAP by ${data.playerId}! They win the pile`, "received");
+                log(`🖐 VALID SLAP by ${slapperName}! ${winnerName} wins the pile`, "received");
             } else {
-                log(`INVALID SLAP by ${data.playerId} — burned a card`, "error");
+                log(`INVALID SLAP by ${slapperName} — burned a card`, "error");
             }
+
             document.getElementById("pileInfo").textContent = `${data.pile.size} cards`;
         });
 
@@ -117,6 +135,7 @@
             if (challengeInfo) challengeInfo.textContent = "none";
 
             document.getElementById("currentTurn").textContent = "-";
+            document.getElementById("pileInfo").textContent = "empty";
         });
 
         function createRoom() {
@@ -134,10 +153,9 @@
         }
 
         function startGame() {
-        console.log("Starting game with room code:", currentRoomCode);
-        socket.emit("start-game", currentRoomCode);
-        log("Starting game", "sent");
-    }
+            socket.emit("start-game", currentRoomCode);
+            log("Starting game", "sent");
+        }
 
         function playCard() {
             socket.emit("play-card", currentRoomCode);

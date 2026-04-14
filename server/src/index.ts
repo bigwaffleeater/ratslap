@@ -1,3 +1,5 @@
+// index.ts
+
 import express from "express";
 import { createServer } from "http";
 import { Server } from "socket.io";
@@ -110,25 +112,55 @@ io.on("connection", (socket) => {
             console.log(`Current player: ${state.currentPlayerId}`);
             console.log(`Card counts: ${state.room.players.map(p => `${p.name}(${p.hand.length})`).join(", ")}`);
 
-            const result = playCard(state, socket.id);
-            if (!result) {
-                console.log(`REJECTED — not their turn`);
-                return socket.emit("error", "Not your turn");
+            const actingPlayer = state.room.players.find(p => p.id === socket.id);
+            if (!actingPlayer) {
+                console.log(`REJECTED — player not found`);
+                return socket.emit("error", "Player not found");
             }
 
-            console.log(`Card counts after: ${state.room.players.map(p => `${p.name}(${p.hand.length})`).join(", ")}`);
+            // Snapshot BEFORE playCard mutates state
+            const playedCard = actingPlayer.hand[0];
+            const countsBefore = state.room.players.map(p => ({
+                id: p.id,
+                cardCount: p.hand.length
+            }));
 
-            io.to(roomCode).emit("card-played", {
-                playerId: socket.id,
-                topCard: state.pile.peekTop(),
-                currentPlayerId: state.currentPlayerId,
-                pile: state.pile.peekState(),
-                players: state.room.players.map(p => ({
-                    id: p.id,
-                    name: p.name,
-                    cardCount: p.hand.length
-                }))
-            });
+const result = playCard(state, socket.id);
+if (!result) {
+    console.log(`REJECTED — not their turn`);
+    return socket.emit("error", "Not your turn");
+}
+
+console.log(`Card counts after: ${state.room.players.map(p => `${p.name}(${p.hand.length})`).join(", ")}`);
+
+// Detect pile winner by count jump
+let pileWinnerId: string | null = null;
+let pileWinnerName: string | null = null;
+
+for (const p of state.room.players) {
+    const before = countsBefore.find(x => x.id === p.id)?.cardCount ?? 0;
+    const after = p.hand.length;
+
+    if (after > before + 1) {
+        pileWinnerId = p.id;
+        pileWinnerName = p.name;
+        break;
+    }
+}
+
+io.to(roomCode).emit("card-played", {
+    playerId: socket.id,
+    playedCard,
+    currentPlayerId: state.currentPlayerId,
+    pile: state.pile.peekState(),
+    players: state.room.players.map(p => ({
+        id: p.id,
+        name: p.name,
+        cardCount: p.hand.length
+    })),
+    pileWinnerId,
+    pileWinnerName
+});
 
             // After card-played emit
             const winner = checkWinner(state);
@@ -174,6 +206,7 @@ io.on("connection", (socket) => {
                 playerId: socket.id,
                 valid: result.valid,
                 winnerId: result.winnerId,
+                currentPlayerId: state.currentPlayerId,
                 pile: state.pile.peekState(),
                 players: state.room.players.map(p => ({
                     id: p.id,
@@ -202,6 +235,26 @@ io.on("connection", (socket) => {
         }
     });
 
+    socket.on("get-game", (roomCode: string) => {
+    const state = gameStates.get(roomCode);
+    if (!state) return;
+    socket.join(roomCode);
+    socket.emit("game-started", {
+        players: state.room.players.map(p => ({
+            id: p.id,
+            name: p.name,
+            cardCount: p.hand.length
+        })),
+        currentPlayerId: state.currentPlayerId,
+        pile: state.pile.peekState()
+    });
+});
+
+    socket.on("get-room", (roomCode: string) => {
+        const room = rooms.get(roomCode);
+        if (room) socket.emit("room-updated", room);
+    });
+
     // Disconnect
     socket.on("disconnect", () => {
         console.log(`Player disconnected: ${socket.id}`);
@@ -215,7 +268,8 @@ io.on("connection", (socket) => {
     });
 });
 
+
 const PORT = 3000;
-httpServer.listen(PORT, () => {
+httpServer.listen(PORT, "0.0.0.0", () => {
     console.log(`Server running on port ${PORT}`);
 });

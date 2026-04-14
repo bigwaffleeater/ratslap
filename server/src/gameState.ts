@@ -1,3 +1,5 @@
+// gameState.ts
+
 import { Room, Player, Card, DEFAULT_SETTINGS } from "../../shared/types";
 import { dealCards } from "./deck";
 import { Pile } from "./pile";
@@ -83,7 +85,25 @@ export function playCard(state: GameState, playerId: string): GameState | null {
     }
 
     const player = state.room.players.find(p => p.id === playerId)!;
-    if (player.hand.length === 0) return null;
+
+    // If challenged player has no cards left, challenger wins pile
+    if (player.hand.length === 0) {
+        if (state.challenge.isActive && state.challenge.challengedId === playerId) {
+            const challengerId = state.challenge.challengerId;
+            const challenger = state.room.players.find(p => p.id === challengerId)!;
+
+            challenger.hand.push(...state.pile.takeAll());
+            state.currentPlayerId = challengerId;
+            state.challenge = {
+                isActive: false,
+                challengerId: "",
+                challengedId: "",
+                attemptsRemaining: 0
+            };
+            return state;
+        }
+        return null;
+    }
 
     // Play top card from hand onto pile
     const card = player.hand.shift()!;
@@ -100,6 +120,8 @@ export function playCard(state: GameState, playerId: string): GameState | null {
                 challengedId: nextId,
                 attemptsRemaining: getChallengeAttempts(card.value)
             };
+            state.currentPlayerId = nextId;
+            return state;
         } else {
             if (state.challenge.attemptsRemaining === 1) {
                 // Last attempt used up, no face card — challenger wins pile
@@ -117,7 +139,10 @@ export function playCard(state: GameState, playerId: string): GameState | null {
                 };
                 return state;
             } else {
+                // Same challenged player keeps going
                 state.challenge.attemptsRemaining--;
+                state.currentPlayerId = playerId;
+                return state;
             }
         }
     } else if (isFaceCard(card.value)) {
@@ -129,9 +154,11 @@ export function playCard(state: GameState, playerId: string): GameState | null {
             challengedId: nextId,
             attemptsRemaining: getChallengeAttempts(card.value)
         };
+        state.currentPlayerId = nextId;
+        return state;
     }
 
-    // Advance turn
+    // Normal turn advance
     state.currentPlayerId = getNextPlayerId(state.room.players, playerId);
     return state;
 }

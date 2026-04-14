@@ -1,37 +1,17 @@
-import { useEffect, useState } from "react";
-import { io } from "socket.io-client";
-
-const socket = io("http://localhost:3000");
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import LandingPage from "./pages/LandingPage";
+import LobbyPage from "./pages/LobbyPage";
+import GamePage from "./pages/GamePage";
 
 function App() {
-    const [connected, setConnected] = useState(false);
-
-    useEffect(() => {
-        socket.on("connect", () => {
-            console.log("Connected to server:", socket.id);
-            setConnected(true);
-        });
-
-        socket.on("connect_error", (err) => {
-            console.log("Connection error:", err.message);
-        });
-
-        socket.on("disconnect", () => {
-            setConnected(false);
-        });
-
-        return () => {
-            socket.off("connect");
-            socket.off("connect_error");
-            socket.off("disconnect");
-        };
-    }, []);
-
     return (
-        <div>
-            <h1>Ratslap</h1>
-            <p>Status: {connected ? "Connected" : "Disconnected"}</p>
-        </div>
+        <BrowserRouter>
+            <Routes>
+                <Route path="/" element={<LandingPage />} />
+                <Route path="/room/:roomCode" element={<LobbyPage />} />
+                <Route path="/game/:roomCode" element={<GamePage />} />
+            </Routes>
+        </BrowserRouter>
     );
 }
 
