@@ -12,8 +12,9 @@
     "allowImportingTsExtensions": true,
     "verbatimModuleSyntax": true,
     "moduleDetection": "force",
-    "noEmit": true,
-
+    
+    /* Remove noEmit - composite requires emitting */
+    
     /* Linting */
     "strict": true,
     "noUnusedLocals": true,
@@ -25,7 +26,6 @@
     "composite": true,
     "allowSyntheticDefaultImports": true,
     "outDir": "./dist-node"
-  
   },
   "include": ["vite.config.ts"]
 }
