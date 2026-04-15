@@ -160,6 +160,112 @@ function GamePage() {
         return () => window.removeEventListener("keydown", onKey);
     }, [slap]);
 
+    const styles = {
+    container: {
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        padding: "20px",
+        color: "#fff",
+    },
+    center: {
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        height: "100vh",
+    },
+    header: {
+        display: "flex",
+        justifyContent: "space-between",
+        width: "100%",
+        marginBottom: "20px",
+    },
+    playerList: {
+        display: "flex",
+        gap: "10px",
+    },
+    playerBox: {
+        padding: "8px 12px",
+        background: "#222",
+        borderRadius: "8px",
+    },
+    me: {
+        fontWeight: "bold",
+    },
+    pileSection: {
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        margin: "20px 0",
+    },
+    card: {
+        width: "80px",
+        height: "120px",
+        background: "#fff",
+        borderRadius: "8px",
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "space-between",
+        alignItems: "center",
+        padding: "10px",
+        fontSize: "24px",
+    },
+    emptyCard: {
+        width: "80px",
+        height: "120px",
+        background: "#444",
+        borderRadius: "8px",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    label: {
+        margin: "5px",
+        fontSize: "14px",
+    },
+    status: {
+        marginTop: "10px",
+        fontSize: "18px",
+    },
+    turn: {
+        marginLeft: "10px",
+        color: "#0f0",
+    },
+    controls: {
+        display: "flex",
+        gap: "10px",
+        marginTop: "20px",
+    },
+    slapBtn: {
+        padding: "10px 20px",
+        fontSize: "16px",
+        background: "#ff4444",
+        color: "#fff",
+        border: "none",
+        borderRadius: "6px",
+    },
+    playBtn: {
+        padding: "10px 20px",
+        fontSize: "16px",
+        background: "#4444ff",
+        color: "#fff",
+        border: "none",
+        borderRadius: "6px",
+    },
+    hand: {
+        marginTop: "20px",
+    },
+    bigText: {
+        fontSize: "24px",
+        fontWeight: "bold",
+    },
+    smallText: {
+        fontSize: "12px",
+        opacity: 0.7,
+    },
+};
+
     if (gameOver) {
         return (
             <div style={styles.center}>
