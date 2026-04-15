@@ -28,7 +28,7 @@ function LobbyPage() {
             setPlayers(room.players);
         };
 
-        const onGameStarted = (data: any) => {
+        const onGameStarted = () => {
             navigate(`/game/${roomCode}`, { state: { ...state, myId: socket.id } });
         };
 
