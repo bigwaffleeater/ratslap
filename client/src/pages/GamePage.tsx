@@ -23,7 +23,7 @@ function suitSymbol(suit: string) {
 
 function GamePage() {
     const { roomCode } = useParams();
-    const { state } = useLocation();
+    // const { state } = useLocation();
     const navigate = useNavigate();
 
     const [players, setPlayers] = useState<PlayerInfo[]>([]);

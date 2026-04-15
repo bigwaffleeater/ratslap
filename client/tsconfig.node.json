@@ -9,12 +9,11 @@
 
     /* Bundler mode */
     "moduleResolution": "bundler",
-    "allowImportingTsExtensions": true,
     "verbatimModuleSyntax": true,
     "moduleDetection": "force",
-    
-    /* Remove noEmit - composite requires emitting */
-    
+    "noEmit": false,
+    "outDir": "./dist-node",
+
     /* Linting */
     "strict": true,
     "noUnusedLocals": true,
@@ -24,8 +23,7 @@
     "noUncheckedSideEffectImports": true,
 
     "composite": true,
-    "allowSyntheticDefaultImports": true,
-    "outDir": "./dist-node"
+    "allowSyntheticDefaultImports": true
   },
   "include": ["vite.config.ts"]
 }
