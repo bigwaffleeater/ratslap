@@ -1,6 +1,16 @@
 import { io } from "socket.io-client";
 
-const url = import.meta.env.VITE_SOCKET_URL || "http://localhost:3000";
+// Safe way to get the URL that works with TypeScript
+const getSocketUrl = () => {
+    // Check if we're in Vite environment
+    if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_SOCKET_URL) {
+        return import.meta.env.VITE_SOCKET_URL;
+    }
+    // Fallback for production or when env var is not set
+    return "https://ratslap-production.up.railway.app";
+};
+
+const url = getSocketUrl();
 console.log("🔌 Connecting to Socket.IO server at:", url);
 
 export const socket = io(url, {
