@@ -1,6 +1,14 @@
 {
   "build": {
     "builder": "NIXPACKS",
+    "nixpacksConfig": {
+      "setup": {
+        "nixPkgs": ["nodejs_20"]
+      },
+      "install": {
+        "cmds": ["cd server && npm install"]
+      }
+    },
     "buildCommand": "cd server && npm install"
   },
   "deploy": {
