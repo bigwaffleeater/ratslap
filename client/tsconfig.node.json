@@ -24,6 +24,7 @@
 
     "composite": true,
     "allowSyntheticDefaultImports": true,
+    "outDir": "./dist-node"
   
   },
   "include": ["vite.config.ts"]
