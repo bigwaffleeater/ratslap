@@ -3,14 +3,22 @@ import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { socket } from "../socket";
 
 type PlayerInfo = { id: string; name: string; cardCount: number };
-type PileState = { size: number; topCard: { value: string; suit: string } | null };
+type PileState = {
+    size: number;
+    topCard: { value: string; suit: string } | null;
+};
 
 function isRed(suit: string) {
     return suit === "hearts" || suit === "diamonds";
 }
 
 function suitSymbol(suit: string) {
-    return { hearts: "♥", diamonds: "♦", clubs: "♣", spades: "♠" }[suit] ?? suit;
+    return {
+        hearts: "♥",
+        diamonds: "♦",
+        clubs: "♣",
+        spades: "♠",
+    }[suit] ?? suit;
 }
 
 function GamePage() {
@@ -20,9 +28,15 @@ function GamePage() {
 
     const [players, setPlayers] = useState<PlayerInfo[]>([]);
     const [currentPlayerId, setCurrentPlayerId] = useState("");
-    const [pile, setPile] = useState<PileState>({ size: 0, topCard: null });
+    const [pile, setPile] = useState<PileState>({
+        size: 0,
+        topCard: null,
+    });
     const [statusMsg, setStatusMsg] = useState("");
-    const [gameOver, setGameOver] = useState<{ winnerId: string; winnerName: string } | null>(null);
+    const [gameOver, setGameOver] = useState<{
+        winnerId: string;
+        winnerName: string;
+    } | null>(null);
     const [myId, setMyId] = useState(() => socket.id ?? "");
 
     const playersRef = useRef<PlayerInfo[]>([]);
@@ -34,15 +48,20 @@ function GamePage() {
     useEffect(() => {
         socket.emit("get-game", roomCode);
 
-        const onGameStarted = (data: { players: PlayerInfo[]; currentPlayerId: string; pile: PileState }) => {
-            console.log("game-started received, socket.id:", socket.id);
-            console.log("data.currentPlayerId:", data.currentPlayerId);
-            console.log("data.players:", data.players.map(p => `${p.name}:${p.id}`));
+        const onGameStarted = (data: {
+            players: PlayerInfo[];
+            currentPlayerId: string;
+            pile: PileState;
+        }) => {
             setMyId(socket.id ?? "");
             setPlayers(data.players);
             setCurrentPlayerId(data.currentPlayerId);
             setPile(data.pile);
-            setStatusMsg(`${data.players.find(p => p.id === data.currentPlayerId)?.name ?? "?"}'s turn`);
+
+            const name =
+                data.players.find(p => p.id === data.currentPlayerId)?.name ??
+                "?";
+            setStatusMsg(`${name}'s turn`);
         };
 
         const onCardPlayed = (data: {
@@ -51,16 +70,21 @@ function GamePage() {
             currentPlayerId: string;
             pile: PileState;
             players: PlayerInfo[];
-            pileWinnerId: string | null;
             pileWinnerName: string | null;
         }) => {
             setPlayers(data.players);
             setCurrentPlayerId(data.currentPlayerId);
             setPile(data.pile);
-            const nextName = data.players.find(p => p.id === data.currentPlayerId)?.name ?? "?";
+
+            const nextName =
+                data.players.find(p => p.id === data.currentPlayerId)?.name ??
+                "?";
+
             if (data.pileWinnerName) {
                 setStatusMsg(`${data.pileWinnerName} takes the pile!`);
-                setTimeout(() => setStatusMsg(`${nextName}'s turn`), 1500);
+                setTimeout(() => {
+                    setStatusMsg(`${nextName}'s turn`);
+                }, 1500);
             } else {
                 setStatusMsg(`${nextName}'s turn`);
             }
@@ -69,25 +93,38 @@ function GamePage() {
         const onSlapResult = (data: {
             playerId: string;
             valid: boolean;
-            winnerId?: string;
             pile: PileState;
             players: PlayerInfo[];
             currentPlayerId?: string;
         }) => {
             setPlayers(data.players);
             setPile(data.pile);
-            if (data.currentPlayerId) setCurrentPlayerId(data.currentPlayerId);
-            const slapperName = data.players.find(p => p.id === data.playerId)?.name ?? data.playerId.slice(0, 6);
-            if (data.valid) {
-                setStatusMsg(`${slapperName} slaps — takes the pile!`);
-            } else {
-                setStatusMsg(`${slapperName} bad slap — burned a card`);
+
+            if (data.currentPlayerId) {
+                setCurrentPlayerId(data.currentPlayerId);
             }
+
+            const name =
+                data.players.find(p => p.id === data.playerId)?.name ??
+                data.playerId.slice(0, 6);
+
+            setStatusMsg(
+                data.valid
+                    ? `${name} slaps — takes the pile!`
+                    : `${name} bad slap — burned a card`
+            );
         };
 
-        const onGameOver = (data: { winnerId: string; winnerName: string; players: PlayerInfo[] }) => {
+        const onGameOver = (data: {
+            winnerId: string;
+            winnerName: string;
+            players: PlayerInfo[];
+        }) => {
             setPlayers(data.players);
-            setGameOver({ winnerId: data.winnerId, winnerName: data.winnerName });
+            setGameOver({
+                winnerId: data.winnerId,
+                winnerName: data.winnerName,
+            });
         };
 
         socket.on("game-started", onGameStarted);
@@ -101,7 +138,7 @@ function GamePage() {
             socket.off("slap-result", onSlapResult);
             socket.off("game-over", onGameOver);
         };
-    }, []);
+    }, [roomCode]);
 
     const playCard = useCallback(() => {
         socket.emit("play-card", roomCode);
@@ -113,20 +150,26 @@ function GamePage() {
 
     useEffect(() => {
         const onKey = (e: KeyboardEvent) => {
-            if (e.code === "Space") { e.preventDefault(); slap(); }
+            if (e.code === "Space") {
+                e.preventDefault();
+                slap();
+            }
         };
+
         window.addEventListener("keydown", onKey);
         return () => window.removeEventListener("keydown", onKey);
     }, [slap]);
 
     if (gameOver) {
         return (
-            <div style={{ padding: "40px", fontFamily: "monospace", textAlign: "center" }}>
+            <div style={styles.center}>
                 <h1>Game Over</h1>
-                <p style={{ fontSize: "24px", margin: "20px 0" }}>
-                    {gameOver.winnerId === myId ? "🏆 You win!" : `${gameOver.winnerName} wins!`}
+                <p style={styles.bigText}>
+                    {gameOver.winnerId === myId
+                        ? "🏆 You win!"
+                        : `${gameOver.winnerName} wins!`}
                 </p>
-                <button onClick={() => navigate("/")} style={{ padding: "10px 24px", marginTop: "16px" }}>
+                <button onClick={() => navigate("/")}>
                     Back to lobby
                 </button>
             </div>
@@ -134,108 +177,93 @@ function GamePage() {
     }
 
     return (
-        <div style={{ position: "relative", padding: "24px 16px", fontFamily: "monospace", maxWidth: "400px", margin: "0 auto", textAlign: "center" }}>
-            <div
-    style={{
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "flex-start",
-        gap: "12px",
-        marginBottom: "20px",
-    }}
->
-    <div
-        style={{
-            display: "flex",
-            gap: "10px",
-            flexWrap: "wrap",
-            justifyContent: "flex-start",
-            flex: 1,
-        }}
-    >
-        {players.filter(p => p.id !== myId).map(p => (
-            <div
-                key={p.id}
-                style={{
-                    padding: "6px 14px",
-                    border: p.id === currentPlayerId ? "2px solid #aa3bff" : "1px solid #ccc",
-                    borderRadius: "8px",
-                    fontSize: "13px",
-                }}
-            >
-                {p.name}{" "}
-                <span style={{ fontSize: "11px", color: "#888" }}>
-                    ({p.cardCount})
-                </span>
-            </div>
-        ))}
-    </div>
+        <div style={styles.container}>
+            {/* Header */}
+            <div style={styles.header}>
+                <div style={styles.playerList}>
+                    {players
+                        .filter(p => p.id !== myId)
+                        .map(p => (
+                            <div
+                                key={p.id}
+                                style={{
+                                    ...styles.playerBox,
+                                    border:
+                                        p.id === currentPlayerId
+                                            ? "2px solid #aa3bff"
+                                            : "1px solid #ccc",
+                                }}
+                            >
+                                {p.name}{" "}
+                                <span style={styles.smallText}>
+                                    ({p.cardCount})
+                                </span>
+                            </div>
+                        ))}
+                </div>
 
-    <div
-        style={{
-            fontSize: "13px",
-            color: "#888",
-            whiteSpace: "nowrap",
-            textAlign: "right",
-            marginTop: "6px",
-        }}
-    >
-        You: <span style={{ color: "#fff" }}>{myInfo?.name ?? "..."}</span>
-    </div>
-</div>
-            <div style={{ margin: "20px 0" }}>
-                <p style={{ fontSize: "12px", color: "#888", marginBottom: "8px" }}>PILE</p>
+                <div style={styles.me}>
+                    You:{" "}
+                    <span style={{ color: "#fff" }}>
+                        {myInfo?.name ?? "..."}
+                    </span>
+                </div>
+            </div>
+
+            {/* Pile */}
+            <div style={styles.pileSection}>
+                <p style={styles.label}>PILE</p>
+
                 {pile.topCard ? (
-                    <div style={{
-                        width: "80px", height: "112px",
-                        border: "1px solid #ccc", borderRadius: "8px",
-                        display: "flex", flexDirection: "column",
-                        alignItems: "center", justifyContent: "center",
-                        margin: "0 auto",
-                        color: isRed(pile.topCard.suit) ? "#D85A30" : "#111",
-                        fontSize: "28px", fontWeight: 500,
-                        background: "#fff"
-                    }}>
+                    <div
+                        style={{
+                            ...styles.card,
+                            color: isRed(pile.topCard.suit)
+                                ? "#D85A30"
+                                : "#111",
+                        }}
+                    >
                         <span>{pile.topCard.value}</span>
-                        <span style={{ fontSize: "20px" }}>{suitSymbol(pile.topCard.suit)}</span>
+                        <span>{suitSymbol(pile.topCard.suit)}</span>
                     </div>
                 ) : (
-                    <div style={{
-                        width: "80px", height: "112px",
-                        border: "2px dashed #ccc", borderRadius: "8px",
-                        display: "flex", alignItems: "center", justifyContent: "center",
-                        margin: "0 auto", color: "#aaa", fontSize: "12px"
-                    }}>empty</div>
+                    <div style={styles.emptyCard}>empty</div>
                 )}
-                <p style={{ fontSize: "12px", color: "#888", marginTop: "8px" }}>{pile.size} cards</p>
+
+                <p style={styles.label}>{pile.size} cards</p>
             </div>
-            <p style={{ fontSize: "13px", color: "#666", marginBottom: "16px", minHeight: "18px" }}>
+
+            {/* Status */}
+            <p style={styles.status}>
                 {statusMsg}
-                {isMyTurn && <span style={{ marginLeft: "8px", background: "#EEEDFE", color: "#3C3489", borderRadius: "99px", padding: "2px 10px", fontSize: "11px" }}>your turn</span>}
+                {isMyTurn && <span style={styles.turn}>your turn</span>}
             </p>
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "10px" }}>
-                <button onClick={slap} style={{
-                    width: "160px", height: "56px",
-                    background: "#FCEBEB", color: "#A32D2D",
-                    border: "1px solid #f0a0a0", borderRadius: "10px",
-                    fontSize: "18px", fontWeight: 500, cursor: "pointer"
-                }}>
+
+            {/* Buttons */}
+            <div style={styles.controls}>
+                <button onClick={slap} style={styles.slapBtn}>
                     SLAP
                 </button>
-                <button onClick={playCard} disabled={!isMyTurn} style={{
-                    width: "160px", height: "44px",
-                    background: isMyTurn ? "#fff" : "#f5f5f5",
-                    border: "1px solid #ccc", borderRadius: "8px",
-                    fontSize: "15px", cursor: isMyTurn ? "pointer" : "not-allowed",
-                    opacity: isMyTurn ? 1 : 0.4,
-                    color: "#111"
-                }}>
+
+                <button
+                    onClick={playCard}
+                    disabled={!isMyTurn}
+                    style={{
+                        ...styles.playBtn,
+                        opacity: isMyTurn ? 1 : 0.4,
+                    }}
+                >
                     Play card
                 </button>
             </div>
+
+            {/* Hand count */}
             {myInfo && (
-                <div style={{ marginTop: "24px", fontSize: "13px", color: "#888" }}>
-                    <span style={{ fontSize: "22px", fontWeight: 500, color: "#fff" }}>{myInfo.cardCount}</span> cards in hand
+                <div style={styles.hand}>
+                    <span style={styles.bigText}>
+                        {myInfo.cardCount}
+                    </span>{" "}
+                    cards in hand
                 </div>
             )}
         </div>
