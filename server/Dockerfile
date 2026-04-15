@@ -2,21 +2,24 @@ FROM node:18-alpine
 
 WORKDIR /app
 
-# Copy package files
-COPY package*.json tsconfig.json ./
+# Copy package files from server folder
+COPY server/package*.json server/tsconfig.json ./
 
 # Install dependencies
 RUN npm install
 
-# Copy source code and shared folder
-COPY src ./src
-COPY ../shared ./shared
+# Copy server source code
+COPY server/src ./src
+
+# Copy shared folder (from root)
+COPY shared ./shared
 
 # Build TypeScript
 RUN npm run build
 
-# Expose port
+# List contents to debug (optional - remove after working)
+RUN ls -la && ls -la dist/
+
 EXPOSE 3000
 
-# Start the app
 CMD ["npm", "start"]

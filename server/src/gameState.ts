@@ -1,6 +1,6 @@
 // gameState.ts
 
-import { Room, Player, Card, DEFAULT_SETTINGS } from "../../shared/types";
+import { Room, Player, Card, DEFAULT_SETTINGS } from "./shared-types";
 import { dealCards } from "./deck";
 import { Pile } from "./pile";
 import { validateSlap, isFaceCard, getChallengeAttempts } from "./rules";

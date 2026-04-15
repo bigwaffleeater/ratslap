@@ -1,5 +1,5 @@
 import { Pile } from "./pile";
-import { RoomSettings } from "../../shared/types";
+import { RoomSettings } from "./shared-types";
 
 export function isDouble(pile: Pile): boolean {
     if (pile.size < 2) return false;

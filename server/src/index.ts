@@ -3,7 +3,7 @@
 import express from "express";
 import { createServer } from "http";
 import { Server } from "socket.io";
-import { Room } from "../../shared/types";
+import { Room } from "./shared-types";
 import {
     GameState, createRoom, generateRoomCode,
     startGame, playCard, handleSlap,

@@ -8,7 +8,7 @@ exports.startGame = startGame;
 exports.playCard = playCard;
 exports.handleSlap = handleSlap;
 exports.checkWinner = checkWinner;
-const shared_types_1 = require("./shared-types");
+const types_1 = require("./shared/types");
 const deck_1 = require("./deck");
 const pile_1 = require("./pile");
 const rules_1 = require("./rules");
@@ -24,7 +24,7 @@ function createRoom(roomCode, hostId, hostName) {
                 isConnected: true
             }],
         status: "lobby",
-        settings: shared_types_1.DEFAULT_SETTINGS
+        settings: types_1.DEFAULT_SETTINGS
     };
 }
 function generateRoomCode() {
