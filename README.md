@@ -2,7 +2,7 @@
 
 Play the live demo at [ratslap.vercel.app](https://ratslap.vercel.app/)!
 
-This project is a full-stack implementation of the game Egyptian Ratscrew/Ratslap, programmed in Typescript, and utilizing React, Node.js, and Socket.io. Ratslap deployed on Vercel and Railway.
+This project is a full-stack implementation of the game Egyptian Ratscrew/Ratslap, programmed in Typescript, and utilizing React, Node.js, and Socket.io. Ratslap is deployed on Vercel (frontend) and Railway (backend).
 
 ## Rules of Ratslap
 
@@ -26,7 +26,7 @@ If the card on top of the playing deck is the same as the next card played, then
 
 If the card second from the top is the same as the next card played, then the playing deck is slappable. 
 
-# Implementation: 
+## Implementation: 
 
 This implementation of Egyptian Ratscrew does not use jokers. 
 
